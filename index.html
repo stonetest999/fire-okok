@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>火晶建築升級規劃</title>
+<style>
+:root{--bg:#f6f4ef;--c:#fff;--t:#222;--m:#666;--b:#ddd;--a:#c2410c;--ok:#15803d;--bad:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#161412;--c:#221f1c;--t:#eee;--m:#aaa;--b:#3a3631;--a:#fb923c;--ok:#4ade80;--bad:#f87171}}
+*{box-sizing:border-box}body{margin:0 auto;background:var(--bg);color:var(--t);font:15px/1.5 system-ui,sans-serif;padding:12px 12px 90px;max-width:1000px}
+h1{font-size:20px}h2{font-size:16px;margin:0 0 8px;color:var(--a)}
+section{background:var(--c);border:1px solid var(--b);border-radius:10px;padding:12px;margin:12px 0}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+label{font-size:12px;color:var(--m);display:block}
+input,select,button{font:inherit;width:100%;padding:7px;border:1px solid var(--b);border-radius:6px;background:var(--bg);color:var(--t)}
+button{width:auto;background:var(--a);color:#fff;border:0;cursor:pointer;margin:4px 4px 0 0}
+button.s{background:var(--b);color:var(--t)}
+.w{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+td,th{border-bottom:1px solid var(--b);padding:4px 6px;text-align:right}th{color:var(--m);font-weight:600}td:first-child,th:first-child{text-align:left}
+td input{padding:3px;width:80px}td input[type=checkbox]{width:20px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.k div{background:var(--bg);border-radius:8px;padding:8px}.k b{display:block;font-size:18px}
+.bad{color:var(--bad)}.ok{color:var(--ok)}.ms{background:rgba(194,65,12,.12)}small{color:var(--m)}
+.note{background:var(--bg);border-left:3px solid var(--a);padding:6px 10px;border-radius:4px;font-size:13px;margin:6px 0}
+#bar{position:fixed;left:0;right:0;bottom:0;background:var(--c);border-top:1px solid var(--b);padding:8px 12px;display:flex;gap:10px;align-items:center;justify-content:center}
+#bar button{font-size:16px;padding:10px 18px;margin:0}#st{font-size:13px;color:var(--m)}#st.d{color:var(--bad);font-weight:600}
+#hd{display:flex;justify-content:space-between;align-items:center;gap:8px}#hd h1{margin:12px 0}#lang{width:auto}
+</style></head><body>
+<div id="hd"><h1 data-i="h1"></h1>
+<select id="lang" onchange="setLang(this.value)" aria-label="Language"><option value="zh">繁體中文</option><option value="ko">한국어</option><option value="en">English</option></select></div>
+<div class="note" data-i="note"></div>
+
+<section><h2 data-i="s1"></h2><div class="g" id="inp"></div>
+<small id="dly"></small>
+<h3 style="font-size:14px;margin:12px 0 4px" data-i="stgT"></h3><div class="w"><table id="stg"></table></div>
+<h3 style="font-size:14px;margin:12px 0 4px" data-i="trT"></h3>
+<div class="note" data-i="trN"></div>
+<div class="w"><table id="tr"></table></div>
+<button class="s" onclick="addTier()" data-i="add"></button>
+<button class="s" onclick="if(confirm(T('cr'))){localStorage.removeItem('fcp2');location.reload()}" data-i="reset"></button></section>
+
+<section><h2 data-i="s2"></h2><div class="k" id="ov"></div><div id="warn"></div></section>
+<section><h2 data-i="s3"></h2><div class="w"><table id="ms"></table></div></section>
+<section><h2 data-i="s4"></h2>
+<small data-i="pl1"></small>
+<div class="w" style="margin-top:8px"><table id="pl"></table></div>
+<small id="hint"></small><br>
+<small data-i="pl2"></small></section>
+
+<div id="bar"><span id="st"></span><button onclick="calc()" data-i="calc"></button></div>
+
+<script>
+const KEY='fcp2',LKEY='fcl';
+/* ===== i18n ===== */
+const I={
+zh:{
+title:'火晶建築升級規劃',h1:'🔥 火晶建築升級規劃',
+note:'使用方式：① 填好下方設定 → ② 按畫面底部「🔄 開始計算」→ ③ 往下查看里程碑與每週／每日計畫。<b>每次修改設定後都要再按一次「開始計算」才會更新結果。</b>',
+s1:'① 基本設定',s2:'② 升級總覽',s3:'③ 階段里程碑',s4:'④ 每週／每日執行計畫',
+stgT:'建築階段需求（勾選＝已完成，可直接修改數字）',trT:'每週精煉兌換方案',
+trN:'每個方案是「一週的總兌換量」，不是累進。<b>勾選＝要使用</b>：自動規劃只會從有勾的方案中挑選，不想用的取消勾選或按 ✕ 刪除即可；數字也能自行修改，並可按下方「＋新增方案」。',
+add:'＋新增方案',reset:'還原預設',cr:'還原預設值？',
+pl1:'計算後會自動排出最省火晶的方案，你也可以用每週的下拉選單手動改，改完會立即更新。',
+pl2:'每日次數＝週一至週日。「扣保留後」＝火晶餘額 − 尚未升級的建築火晶，負數代表目前尚缺，需等後續每日收入補上。',
+calc:'🔄 開始計算',dirty:'⚠ 設定已變更，請按「開始計算」',okS:'✓ 已計算完成',
+fire:'火晶庫存',ref:'精煉火晶庫存',mon:'預估每月平均額外取得火晶（免費＋課金）',weeks:'規劃週數（希望幾週內完成）',start:'開始日期',
+dly:(d,m)=>`平均每天約取得 ${d} 火晶（每月 ${m} ÷ 30 天）`,
+hStage:'階段',hFire:'火晶',hRef:'精煉',hDone:'已完成',
+hUse:'使用',hCnt:'每週次數',hCost:'火晶消耗',hGain:'精煉取得',hDel:'刪除',
+k1:'建築火晶需求',k2:'建築精煉需求',k3:'計畫兌換消耗火晶',k4:'計畫兌換精煉產出',k5:'預估總可用火晶',k6:'總消耗（建築＋兌換）',k7:'預計剩餘火晶',
+w1:n=>`⚠ 精煉火晶不足，缺 ${n}，請增加規劃週數或勾選更高階的方案。`,
+wg:(k,d,s)=>`第${k}週(${d})缺${s}`,wSep:'、',
+w2:l=>`⚠ 現金流缺口：${l}。可提高預估收入、換較省的方案，或增加週數。`,
+w3:'✓ 依每日收入逐週模擬，火晶餘額無負數。',
+stg:n=>`${n} 階`,
+mDone:'已完成',mMiss:'計畫週數內未達成',
+mh1:'階段',mh2:'預計完成',mh3:'第幾週',mh4:'與上階段間隔',mh5:'完成後剩精煉',mh6:'完成後剩火晶',
+wk:n=>`${n} 週`,
+ph1:'週',ph2:'期間',ph3:'方案',ph4:'每日(一→日)',ph5:'耗火晶',ph6:'得精煉',ph7:'精煉庫存',ph8:'火晶餘額',ph9:'扣保留後',ph10:'距下階段',
+ms:s=>` 🏗${s}階`,none:'不兌換',times:n=>`${n}次`,
+hint:(need,mx,w)=>`還需精煉 ${need}；已勾選方案單週最高產出 ${mx}，理論最少 ${w} 週。`,
+a1:'請至少勾選一個兌換方案',a2:'此週數內無法達成精煉需求，請增加規劃週數或勾選更高階方案。'},
+ko:{
+title:'화정 건물 업그레이드 계획',h1:'🔥 화정 건물 업그레이드 계획',
+note:'사용 방법: ① 아래 설정 입력 → ② 화면 하단의 「🔄 계산 시작」 클릭 → ③ 아래로 내려가 마일스톤과 주간/일일 계획 확인. <b>설정을 바꿀 때마다 다시 「계산 시작」을 눌러야 결과가 갱신됩니다.</b>',
+s1:'① 기본 설정',s2:'② 업그레이드 개요',s3:'③ 단계 마일스톤',s4:'④ 주간/일일 실행 계획',
+stgT:'건물 단계별 필요량 (체크 = 완료, 숫자 직접 수정 가능)',trT:'주간 정제 교환 플랜',
+trN:'각 플랜은 「한 주의 총 교환량」이며 누적이 아닙니다. <b>체크 = 사용</b>: 자동 계획은 체크된 플랜 중에서만 선택합니다. 쓰지 않을 플랜은 체크를 해제하거나 ✕로 삭제하세요. 숫자도 직접 수정할 수 있고, 아래 「＋플랜 추가」로 새 플랜을 만들 수도 있습니다.',
+add:'＋플랜 추가',reset:'기본값 복원',cr:'기본값으로 복원할까요?',
+pl1:'계산하면 화정이 가장 적게 드는 플랜이 자동으로 배정되며, 주마다 드롭다운으로 직접 바꿀 수도 있습니다. 바꾸면 즉시 갱신됩니다.',
+pl2:'일일 횟수 = 월~일. 「보유분 차감 후」 = 화정 잔액 − 아직 업그레이드하지 않은 건물의 화정. 음수는 현재 부족하다는 뜻이며 이후 일일 수입으로 채워야 합니다.',
+calc:'🔄 계산 시작',dirty:'⚠ 설정이 변경되었습니다. 「계산 시작」을 눌러 주세요',okS:'✓ 계산 완료',
+fire:'화정 보유량',ref:'정제 화정 보유량',mon:'월 평균 추가 획득 화정 (무료＋유료)',weeks:'계획 주 수 (몇 주 안에 완료할지)',start:'시작일',
+dly:(d,m)=>`하루 평균 약 ${d} 화정 획득 (월 ${m} ÷ 30일)`,
+hStage:'단계',hFire:'화정',hRef:'정제',hDone:'완료',
+hUse:'사용',hCnt:'주간 횟수',hCost:'화정 소비',hGain:'정제 획득',hDel:'삭제',
+k1:'건물 필요 화정',k2:'건물 필요 정제',k3:'계획 교환 소비 화정',k4:'계획 교환 정제 산출',k5:'예상 총 사용 가능 화정',k6:'총 소비 (건물＋교환)',k7:'예상 잔여 화정',
+w1:n=>`⚠ 정제 화정이 ${n} 부족합니다. 계획 주 수를 늘리거나 더 높은 플랜을 체크하세요.`,
+wg:(k,d,s)=>`${k}주차(${d}) ${s} 부족`,wSep:', ',
+w2:l=>`⚠ 자금 흐름 부족: ${l}. 예상 수입을 늘리거나, 더 저렴한 플랜으로 바꾸거나, 주 수를 늘리세요.`,
+w3:'✓ 일일 수입 기준으로 주별 시뮬레이션한 결과, 화정 잔액이 음수가 되지 않습니다.',
+stg:n=>`${n}단계`,
+mDone:'완료',mMiss:'계획 주 수 내 미달성',
+mh1:'단계',mh2:'예상 완료일',mh3:'몇 주차',mh4:'이전 단계와의 간격',mh5:'완료 후 남은 정제',mh6:'완료 후 남은 화정',
+wk:n=>`${n}주`,
+ph1:'주',ph2:'기간',ph3:'플랜',ph4:'일별(월→일)',ph5:'소비 화정',ph6:'획득 정제',ph7:'정제 보유',ph8:'화정 잔액',ph9:'보유분 차감 후',ph10:'다음 단계까지',
+ms:s=>` 🏗${s}단계`,none:'교환 안 함',times:n=>`${n}회`,
+hint:(need,mx,w)=>`정제가 ${need} 더 필요합니다. 체크된 플랜의 주간 최대 산출량은 ${mx}, 이론상 최소 ${w}주입니다.`,
+a1:'교환 플랜을 하나 이상 체크해 주세요',a2:'이 기간 내에 정제 필요량을 달성할 수 없습니다. 계획 주 수를 늘리거나 더 높은 플랜을 체크하세요.'},
+en:{
+title:'Fire Crystal Building Upgrade Planner',h1:'🔥 Fire Crystal Building Upgrade Planner',
+note:'How to use: ① Fill in the settings below → ② Press “🔄 Calculate” at the bottom → ③ Scroll down to see milestones and the weekly / daily plan. <b>Press “Calculate” again after every change to settings to refresh the results.</b>',
+s1:'① Basic Settings',s2:'② Upgrade Overview',s3:'③ Stage Milestones',s4:'④ Weekly / Daily Plan',
+stgT:'Building stage requirements (checked = done; numbers are editable)',trT:'Weekly refining exchange plans',
+trN:'Each plan is the <i>total exchange for one week</i>, not cumulative. <b>Checked = in use</b>: the auto planner only picks from checked plans. Uncheck or press ✕ to remove plans you don’t want; numbers are editable, and you can add more with “＋Add plan” below.',
+add:'＋Add plan',reset:'Restore defaults',cr:'Restore default values?',
+pl1:'After calculation, the plan that uses the fewest Fire Crystals is chosen automatically. You can also change any week with its dropdown; results update immediately.',
+pl2:'Daily counts = Mon to Sun. “After reserve” = Fire Crystal balance − Fire Crystals still needed for unbuilt upgrades. A negative number means a current shortfall that later daily income must cover.',
+calc:'🔄 Calculate',dirty:'⚠ Settings changed — press “Calculate”',okS:'✓ Calculated',
+fire:'Fire Crystals in stock',ref:'Refined Fire Crystals in stock',mon:'Est. avg. extra Fire Crystals per month (free + paid)',weeks:'Planning weeks (finish within how many weeks)',start:'Start date',
+dly:(d,m)=>`About ${d} Fire Crystals per day on average (${m} per month ÷ 30 days)`,
+hStage:'Stage',hFire:'Fire Crystals',hRef:'Refined',hDone:'Done',
+hUse:'Use',hCnt:'Times / week',hCost:'FC cost',hGain:'Refined gained',hDel:'Delete',
+k1:'Building FC needed',k2:'Building Refined needed',k3:'FC spent on planned exchanges',k4:'Refined from planned exchanges',k5:'Est. total available FC',k6:'Total spend (buildings + exchanges)',k7:'Est. FC remaining',
+w1:n=>`⚠ Not enough Refined Fire Crystals, short by ${n}. Add more weeks or check higher-tier plans.`,
+wg:(k,d,s)=>`Week ${k} (${d}) short ${s}`,wSep:', ',
+w2:l=>`⚠ Cash-flow gap: ${l}. Raise estimated income, switch to cheaper plans, or add more weeks.`,
+w3:'✓ Simulated week by week with daily income — the Fire Crystal balance never goes negative.',
+stg:n=>`Stage ${n}`,
+mDone:'Done',mMiss:'Not reached within planned weeks',
+mh1:'Stage',mh2:'Expected finish',mh3:'Week #',mh4:'Gap from previous stage',mh5:'Refined left after',mh6:'FC left after',
+wk:n=>`${n} wk`,
+ph1:'Week',ph2:'Period',ph3:'Plan',ph4:'Daily (Mon→Sun)',ph5:'FC spent',ph6:'Refined gained',ph7:'Refined stock',ph8:'FC balance',ph9:'After reserve',ph10:'To next stage',
+ms:s=>` 🏗Stage ${s}`,none:'No exchange',times:n=>`${n}×`,
+hint:(need,mx,w)=>`Refined still needed: ${need}. Highest weekly output among checked plans: ${mx}, so the theoretical minimum is ${w} week(s).`,
+a1:'Please check at least one exchange plan',a2:'The refined requirement cannot be reached in this many weeks. Add more weeks or check higher-tier plans.'}
+};
+let L='zh';
+try{const x=localStorage.getItem(LKEY);if(x&&I[x])L=x;else{const n=(navigator.language||'').toLowerCase();L=n.startsWith('ko')?'ko':n.startsWith('en')?'en':'zh'}}catch(e){}
+const T=(k,...a)=>{const v=I[L][k];return typeof v=='function'?v(...a):v};
+function applyStatic(){document.documentElement.lang=L=='zh'?'zh-Hant':L;document.title=T('title');
+document.querySelectorAll('[data-i]').forEach(e=>e.innerHTML=T(e.dataset.i));$('lang').value=L}
+function setLang(l){L=l;try{localStorage.setItem(LKEY,l)}catch(e){}
+const was=$('st').className=='d';applyStatic();inputs();render();if(was)dirty()}
+
+/* ===== data ===== */
+const D={fire:7000,ref:0,mon:4000,weeks:22,start:'2026-11-09',
+stages:[{n:6,f:3150,r:197,done:false},{n:7,f:3726,r:293,done:false},{n:8,f:3726,r:414,done:false}],
+tiers:[{n:7,f:70,r:10,on:true},{n:20,f:330,r:29,on:true},{n:26,f:540,r:41,on:true},{n:40,f:1240,r:72,on:true},{n:46,f:1690,r:91,on:true},{n:60,f:3090,r:135,on:true}],plan:[]};
+let S=JSON.parse(JSON.stringify(D));
+try{const x=localStorage.getItem(KEY);if(x)S=JSON.parse(x)}catch(e){}
+const $=id=>document.getElementById(id),N=v=>Number(v)||0,fm=n=>Math.round(n).toLocaleString();
+const F=[['fire'],['ref'],['mon'],['weeks'],['start','date']];
+function dirty(){$('st').textContent=T('dirty');$('st').className='d';
+$('dly').textContent=T('dly',(N(S.mon)/30).toFixed(1),fm(N(S.mon)))}
+function inputs(){$('inp').innerHTML=F.map(([k,t])=>`<div><label>${T(k)}</label><input type="${t||'number'}" value="${S[k]}" oninput="S.${k}=this.type=='date'?this.value:N(this.value);dirty()"></div>`).join('');
+$('dly').textContent=T('dly',(N(S.mon)/30).toFixed(1),fm(N(S.mon)));
+$('stg').innerHTML=`<tr><th>${T('hStage')}</th><th>${T('hFire')}</th><th>${T('hRef')}</th><th>${T('hDone')}</th></tr>`+S.stages.map((s,i)=>`<tr><td><input value="${s.n}" oninput="S.stages[${i}].n=this.value;dirty()" style="width:50px"></td><td><input type=number value="${s.f}" oninput="S.stages[${i}].f=N(this.value);dirty()"></td><td><input type=number value="${s.r}" oninput="S.stages[${i}].r=N(this.value);dirty()"></td><td><input type=checkbox ${s.done?'checked':''} onchange="S.stages[${i}].done=this.checked;dirty()"></td></tr>`).join('');
+$('tr').innerHTML=`<tr><th>${T('hUse')}</th><th>${T('hCnt')}</th><th>${T('hCost')}</th><th>${T('hGain')}</th><th>${T('hDel')}</th></tr>`+S.tiers.map((t,i)=>`<tr><td><input type=checkbox ${t.on!==false?'checked':''} onchange="S.tiers[${i}].on=this.checked;dirty()"></td><td><input type=number value="${t.n}" oninput="S.tiers[${i}].n=N(this.value);dirty()"></td><td><input type=number value="${t.f}" oninput="S.tiers[${i}].f=N(this.value);dirty()"></td><td><input type=number value="${t.r}" oninput="S.tiers[${i}].r=N(this.value);dirty()"></td><td><button class=s onclick="S.tiers.splice(${i},1);inputs();dirty()">✕</button></td></tr>`).join('')}
+function addTier(){S.tiers.push({n:1,f:10,r:1,on:true});inputs();dirty()}
+const dt=(y,m,d)=>new Date(y,m,d),ad=(d,n)=>dt(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const fd=d=>`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+const pd=s=>{const[a,b,c]=(s||D.start).split('-').map(Number);return dt(a,b-1,c)};
+const split=n=>{const b=Math.floor(n/7),r=n%7;return Array.from({length:7},(_,i)=>b+(i<r?1:0)).join('·')};
+const tier=n=>S.tiers.find(t=>t.n==n);
+function sim(){const s=pd(S.start),wk=N(S.mon)/30*7;let fire=N(S.fire),ref=N(S.ref);
+const st=S.stages.map(x=>({...x,date:x.done?'✓':null,wk:null}));
+const left=()=>st.filter(x=>!x.done&&!x.date),done=(we,k)=>{const ms=[];for(const x of left()){if(ref>=x.r&&fire>=x.f){fire-=x.f;ref-=x.r;x.date=we;x.wk=k;ms.push(x.n)}else break}return ms};
+const rows=[],gaps=[];done(s,0);
+S.plan.forEach((n,k)=>{const ws=ad(s,7*k),we=ad(ws,6);
+const t=tier(n)||{n:0,f:0,r:0};if(fire<t.f)gaps.push({k:k+1,d:ws,short:t.f-fire});
+fire-=t.f;ref+=t.r;fire+=wk;
+const ms=done(we,k+1),res=fire-left().reduce((a,x)=>a+N(x.f),0),nx=left()[0];
+rows.push({k:k+1,ws,we,n,t,fire,ref,ms,res,gap:nx?nx.r-ref:0,nx})});
+return{rows,st,gaps}}
+function render(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+const rem=S.stages.filter(x=>!x.done),bf=rem.reduce((a,x)=>a+N(x.f),0),br=rem.reduce((a,x)=>a+N(x.r),0);
+const W=Math.max(1,N(S.weeks));while(S.plan.length<W)S.plan.push(0);S.plan.length=W;
+const r=sim(),ex=S.plan.reduce((a,n)=>a+(tier(n)?.f||0),0),gain=S.plan.reduce((a,n)=>a+(tier(n)?.r||0),0);
+const avail=N(S.fire)+N(S.mon)/30*7*W,sur=avail-bf-ex;
+const k=(l,v,c)=>`<div>${l}<b class="${c||''}">${v}</b></div>`;
+$('ov').innerHTML=k(T('k1'),fm(bf))+k(T('k2'),fm(br))+k(T('k3'),fm(ex))+k(T('k4'),fm(gain),gain+N(S.ref)>=br?'ok':'bad')+
+k(T('k5'),fm(avail))+k(T('k6'),fm(bf+ex))+k(T('k7'),fm(sur),sur<0?'bad':'ok');
+let w='';if(gain+N(S.ref)<br)w+=`<p class=bad>${T('w1',br-gain-N(S.ref))}</p>`;
+if(r.gaps.length)w+=`<p class=bad>${T('w2',r.gaps.slice(0,5).map(g=>T('wg',g.k,fd(g.d),fm(g.short))).join(T('wSep'))+(r.gaps.length>5?'…':''))}</p>`;
+else w+=`<p class=ok>${T('w3')}</p>`;
+$('warn').innerHTML=w;
+let prev=null;$('ms').innerHTML=`<tr><th>${T('mh1')}</th><th>${T('mh2')}</th><th>${T('mh3')}</th><th>${T('mh4')}</th><th>${T('mh5')}</th><th>${T('mh6')}</th></tr>`+
+r.st.map(x=>{if(x.done)return`<tr><td>${T('stg',x.n)}</td><td colspan=5 class=ok>${T('mDone')}</td></tr>`;
+if(!x.date)return`<tr><td>${T('stg',x.n)}</td><td colspan=5 class=bad>${T('mMiss')}</td></tr>`;
+const row=r.rows[x.wk-1],gp=prev===null?T('wk',x.wk):T('wk',x.wk-prev);prev=x.wk;
+return`<tr class=ms><td>${T('stg',x.n)}</td><td>${fd(x.date)}</td><td>${x.wk}</td><td>${gp}</td><td>${row?fm(row.ref):'-'}</td><td>${row?fm(row.fire):'-'}</td></tr>`}).join('');
+$('pl').innerHTML=`<tr><th>${T('ph1')}</th><th>${T('ph2')}</th><th>${T('ph3')}</th><th>${T('ph4')}</th><th>${T('ph5')}</th><th>${T('ph6')}</th><th>${T('ph7')}</th><th>${T('ph8')}</th><th>${T('ph9')}</th><th>${T('ph10')}</th></tr>`+
+r.rows.map((x,i)=>`<tr class="${x.ms.length?'ms':''}"><td>${x.k}${x.ms.length?T('ms',x.ms.join('/')):''}</td><td>${fd(x.ws).slice(5)}–${fd(x.we).slice(5)}</td><td><select onchange="S.plan[${i}]=N(this.value);render()"><option value=0>${T('none')}</option>${S.tiers.filter(t=>t.on!==false||t.n==x.n).map(t=>`<option value=${t.n} ${t.n==x.n?'selected':''}>${T('times',t.n)}</option>`).join('')}</select></td><td>${split(x.n)}</td><td>${fm(x.t.f)}</td><td>${x.t.r}</td><td>${fm(x.ref)}</td><td class="${x.fire<0?'bad':''}">${fm(x.fire)}</td><td class="${x.res<0?'bad':''}">${fm(x.res)}</td><td>${x.nx?Math.max(0,x.gap):'—'}</td></tr>`).join('');
+const need=Math.max(0,br-N(S.ref)),on=S.tiers.filter(t=>t.on!==false),mx=Math.max(0,...on.map(t=>t.r));
+$('hint').textContent=mx?T('hint',need,mx,Math.ceil(need/mx)):'';
+$('st').textContent=T('okS');$('st').className=''}
+function calc(){const rem=S.stages.filter(x=>!x.done),need=Math.max(0,rem.reduce((a,x)=>a+N(x.r),0)-N(S.ref)),W=Math.max(1,N(S.weeks)),T_=S.tiers.filter(t=>t.on!==false&&t.n>0&&t.r>0),I_=1e18;
+if(!need){S.plan=Array(W).fill(0);return render()}
+if(!T_.length){alert(T('a1'));return}
+const f=[],p=[];for(let j=0;j<=W;j++){f.push(Array(need+1).fill(I_));p.push(Array(need+1).fill(null))}f[0][0]=0;
+for(let j=0;j<W;j++)for(let r=0;r<need;r++){if(f[j][r]>=I_)continue;T_.forEach((t,i)=>{const q=Math.min(need,r+t.r),c=f[j][r]+t.f;if(c<f[j+1][q]){f[j+1][q]=c;p[j+1][q]=[r,i]}})}
+let bj=-1,bc=I_;for(let j=1;j<=W;j++)if(f[j][need]<bc){bc=f[j][need];bj=j}
+if(bj<0){alert(T('a2'));S.plan=Array(W).fill(0);return render()}
+const pl=[];let r=need;for(let j=bj;j>0;j--){const[a,i]=p[j][r];pl.push(T_[i].n);r=a}
+pl.sort((a,b)=>tier(b).r-tier(a).r);while(pl.length<W)pl.push(0);S.plan=pl;render()}
+applyStatic();inputs();calc();
+</script></body></html>
